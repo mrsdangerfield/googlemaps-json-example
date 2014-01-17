@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="viewport" content="initial-scale=1, width=device-width, user-scalable=no" />
+	<title>Test postcode lookup</title>
+
+	<script type="text/javascript" src="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.8.3.min.js" ></script>
+	<script src="http://cloud.github.com/downloads/wycats/handlebars.js/handlebars-1.0.0.beta.6.js" >
+	</script>
+
+	<script type="text/javascript"
+     	src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCs3iM56YQjo7p78HTTJnT20Jyd9sZjZM0&sensor=false&region=GB">
+    </script>
+    <style type="text/css">
+		html { height: 100% }
+		body { height: 100%; margin: 0; padding: 0; color: #000; }
+		.dealer-header-smart img { width: 100%; height: auto; padding-top: 5%; position: relative;}
+		.dealer-header-tablet { display: none;}
+		.step-1, .step-2, .step-3 {
+			width: 100%;
+			position: relative;
+			max-width: 650px;
+			margin: 0px auto;
+		}
+		.step-2, .step-3 {
+			display: none;
+		}
+		.search-area-1, .search-area-2, .search-area-3 {
+			width: 100%;
+			max-width: 650px;
+		}
+		.title-main {color: #fff; margin: 5% 2px 3% 2px; }
+		.copy-main {color: #fff; margin: 2% 2px; font-family: Arial, sans-serif; }
+		.copy-main-2 {margin: 2% 2px; font-family: Arial, sans-serif; color: #494949;}
+
+		input[type="text"] {
+			width: 94%; max-width: 600px; height: 30px; color: #989898; font-size: 1.1em;display: block;border: 1px solid #9a9a9a;box-shadow:inset 0 0 10px #9a9a9a; padding: 0px 5px;
+		}
+		.select-btn {
+			width: 95%; max-width: 600px;
+			display: block;
+			font-family: Arial, sans-serif;
+			color: #000;
+			text-decoration: none;
+			margin: 3% 0px 2% 0px;
+		}
+
+		/*step 2 styling*/
+		table {width: 100%; max-width: 600px; font-size: 1em;}
+		tr{ width: 100%;}
+		th {text-align: left;font-family: Arial, sans-serif; color: #494949; }
+		th {width: 33%;}
+		.dealer-header-title {width: 250px;}
+		.dealer-distance-header {text-align: center;}
+		
+		.dealer-name {text-align: left;width: 33%;font-family: Arial, sans-serif; color: #fff;}
+		.dealer-distance {text-align: center;width: 33%;font-family: Arial, sans-serif; color: #494949;}
+		.select-dealer {text-align: center;width: 33%;}
+
+		.search-btn-step2{
+			width: 95%; max-width: 600px;
+			background: url("/mobile/_master/en/dealer_locator/images/search-btn.png") no-repeat 100% 0 ;
+			display: block;
+			text-indent: -9999px;
+			margin: 3% 0px 2% 0px;
+			position: relative;
+			z-index: 3;
+		}
+
+		.search-again {
+			width: 96%; max-width: 600px;
+			background: url("/mobile/_master/en/dealer_locator/images/search-again.png") no-repeat 100% 0 ;
+			display: block;
+			text-indent: -9999px;
+			margin: 3% 0px 2% 0px;
+		}
+
+		/*step 3 styling*/
+
+		.dealer-name-info {color: #fff; margin: 5% 0px 3% 0px;}
+		.dealer-address-info {font-family: Arial, sans-serif; color: #494949;}
+		.dealer-telephone-info {color: #fff; margin: 3% 0px 3% 0px;}
+
+		#map-canvas {width: 500px; height: 500px;}
+
+		.clearfix:after {
+		   content: " "; /* Older browser do not support empty content */
+		   visibility: hidden;
+		   display: block;
+		   height: 0;
+		   clear: both;
+		}
+
+		.clearfix {
+		    *zoom: 1;
+		}
+
+		/*** tablet tweaks ***/
+
+		@media screen and (min-device-width: 768px) and (min-device-height: 752px) and (orientation:portrait){
+			.dealer-container{
+				margin-top: 60px;
+			}
+		}
+
+		@media screen and (min-device-width: 768px) and (min-device-height: 752px){
+			.dealer-header-tablet {display: block; margin-top: 50px;}
+			.dealer-header-tablet img { width: 100%; height: auto; padding-top: 5%; position: relative;}
+			.dealer-header-smart { display: none;}
+		}
+	</style>
+</head>
+<body>
+<div class="dealer-container">
+	<div class="step-1">
+	  	<form>
+	  		<div class="search-area-1 clearfix">
+	  			<input type="text" name="place" id="txtTown" placeholder="Town">
+	  			<a href="#" class="select-btn" title="select">Select</a>
+			</div>
+			<div class="search-area-2 clearfix">
+	  			<input type="text" name="place" id="txtPostcode" placeholder="Postcode">
+	  			<a href="#" class="select-btn" title="select">Select</a>
+	  		</div>
+	  		<div class="search-area-3 clearfix">
+	  			<input type="text" name="place" id="txtDealer" placeholder="Name">
+				<a href="#" class="select-btn" title="select">Select</a>
+			</div>
+	  	</form>
+	  </div>
+	<div class="step-2">
+		<table id="dealer-info">
+			<tbody>
+			<tr>
+				<th class="dealer-header" valign="top">Dealer Name</th>
+				<th>Distance</th>
+				<th></th>
+			</tr>
+			<script id="template" type="text/x-handlebars-template">
+				{{#each this}}
+					<tr>	
+						<td class="dealer-name" valign="top">{{name}}</td>
+						<td class="dealer-distance" valign="top">{{distance}} miles</td>
+						<td class="select-dealer" valign="top">
+							<a href="" data-dealer="{{name}}" data-dealeraddress="{{address}}" data-dealertelephone="{{telephone}}" data-dealerLat="{{latitude}}" data-dealerLong="{{longitude}}" class="search-btn-step2" title="Search">Search</a>
+						</td>
+					</tr>	
+				{{/each}}
+			</script>
+			</tbody>
+		</table>
+		<a href="#" class="search-again" id="search-again">Search again</a>
+
+	</div>
+	<div class="step-3">
+		<div class="dealer-name-info"></div>
+		<div class="dealer-address-info"></div>
+		<div class="dealer-telephone-info"></div>
+
+		<a href="#" id="" class="view-map" id="view-map" title="view map">View Map</a>
+		<div id="map-canvas"/>
+	</div>
+</div>
+	<script type="text/javascript">
+
+	(function($) {
+	   	// Enable the visual refresh
+		google.maps.visualRefresh = true;
+
+	   	var map;
+      	var placeData = "";
+      	var miniDealers = {};
+      	var miniDealersArray = [];
+
+        //Empty the text fields on step one
+
+		$('input:text').focus(
+			function(){
+			$(this).val('');
+		});
+
+		$('input:text').click(
+	    function(){
+	        $(this).val('');
+	    });
+
+		$( ".select-btn" ).on ('click', function(e) {
+
+			e.preventDefault();
+
+			//get the info out of the text box
+			//if statement to check all of the text boxes
+			var placeData = $("#txtPlace").val();
+
+			//implement it into the URL
+			//var url = 'http://localhost:8888/dealer_locator/test.json?';
+
+			$.ajax({
+				type:'GET',
+				url: url +'application=xxxxxxx&brand=xxxx&place='+placeData,
+				success:function(data) {
+
+			        $.each(data.dealers, function(key, val) {
+
+						miniDealers = {
+			        		address : val.address,
+			        		dealerid : val.dealerid,
+			        		dealerimage : val.dealerimage,
+			        		distance : val.distance,
+			        		hours : val.hours,
+			        		latitude : val.latitude,
+			        		longitude : val.longitude,
+			        		name : val.name,
+			        		telephone : val.telephone
+			        	};
+
+			        	miniDealersArray.push(miniDealers);
+
+					});
+					attachHandlebars();
+
+				},
+				error: function (data) {
+			        alert('POST failed.');
+			    },
+				dataType: "json",
+				processData: false,
+			    crossDomain: true
+			});
+
+			$(".step-1").fadeOut(200);
+			$(".step-2").fadeIn(300);
+		});
+
+
+	function attachHandlebars(){
+	    var template = Handlebars.compile( $('#template').html() );
+	    $('#dealer-info').append ( template(miniDealersArray) );
+	}; 
+
+
+    $(document).on('click', ".search-btn-step2", function() {
+
+    		indDealerProcess();
+			$(".step-2").fadeOut(200);
+			$(".step-3").fadeIn(300);
+			
+	});
+
+	function indDealerProcess(){
+
+		var dealer = $(".search-btn-step2").data("dealer");
+		var dealeraddress = $(".search-btn-step2").data("dealeraddress");
+		var dealertelephone = $(".search-btn-step2").data("dealertelephone");
+		var dealerLong = $(".search-btn-step2").data("dealerLong");
+		var dealerLat = $(".search-btn-step2").data("dealerLat");
+
+		
+		$( ".dealer-name-info" ).append(dealer);
+		$( ".dealer-address-info" ).append(dealeraddress.replace(/\;/g, '<br>'));
+		$( ".dealer-telephone-info" ).append(dealertelephone);
+
+		function initialize() {
+	        var mapOptions = {
+	          center: new google.maps.LatLng(dealerLong, dealerLat),
+	          zoom: 8,
+	          mapTypeId: google.maps.MapTypeId.ROADMAP
+	        };
+	        var map = new google.maps.Map(document.getElementById("map-canvas"),
+	            mapOptions);
+	      }
+	      google.maps.event.addDomListener(window, 'load', initialize);
+
+	};  
+
+	})(jQuery);
+                                                                                                                                                                                                        
+    </script>
+</body>
+</html>
